@@ -30,6 +30,11 @@ public:
 
 	std::vector<VkImageView> SwapChainImageViews;
 
+	VkRenderPass RenderPass;
+	VkPipelineLayout PipelineLayout;
+
+	VkPipeline GraphicsPipeline;
+
 	const std::vector<const char*> AdditionalExtensions =
 	{
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -56,4 +61,9 @@ private:
 	// Swapchain
 	void CreateSwapChain();
 	void CreateImageViews();
+
+	void CreateGraphicsPipeline();
+	void CreateRenderPass();
+
+	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 };
