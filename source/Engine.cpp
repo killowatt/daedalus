@@ -15,7 +15,7 @@ Engine::Engine()
 		"Hello World",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		1280, 720,
-		SDL_WINDOW_VULKAN
+		SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
 	);
 
 	if (Window == NULL)
@@ -28,7 +28,7 @@ Engine::Engine()
 	CreateSurface();
 	SelectPhysicalDevice();
 	CreateDevice();
-	CreateSwapChain();
+	CreateSwapchain();
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
@@ -47,6 +47,15 @@ Engine::Engine()
 			if (event.type == SDL_QUIT)
 			{
 				break;
+			}
+			else if (event.type == SDL_WINDOWEVENT)
+			{
+				if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+				{
+					std::cout << "resize \n";
+					winWidth = event.window.data1;
+					winHeight = event.window.data2;
+				}
 			}
 		}
 
@@ -67,6 +76,8 @@ void Engine::Initialize()
 
 void Engine::Cleanup()
 {
+	CleanupSwapchain();
+
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		vkDestroySemaphore(Device, renderFinishedSemaphores[i], nullptr);
@@ -92,6 +103,26 @@ void Engine::Cleanup()
 
 }
 
+
+void Engine::CleanupSwapchain()
+{
+	for (auto framebuffer : SwapChainFramebuffers)
+	{
+		vkDestroyFramebuffer(Device, framebuffer, nullptr);
+	}
+
+	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+
+	vkDestroyPipeline(Device, GraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	vkDestroyRenderPass(Device, RenderPass, nullptr);
+	for (auto imageView : SwapChainImageViews)
+	{
+		vkDestroyImageView(Device, imageView, nullptr);
+	}
+	vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+}
+
 void Engine::Render()
 {
 	// "next frame ..."
@@ -99,7 +130,18 @@ void Engine::Render()
 
 	// this frame
 	uint32_t imageIndex = 0;
-	vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		RecreateSwapchain();
+		return;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		std::cout << "swapchain bad\n";
+		return;
+	}
+
 
 	// check if a previous frame is using this image
 	if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
@@ -125,7 +167,7 @@ void Engine::Render()
 
 	vkResetFences(Device, 1, &inFlightFences[currentFrame]);
 
-	VkResult result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+	result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
 	if (result != VK_SUCCESS)
 	{
 		std::cout << "OUCH!!!\n";
@@ -143,7 +185,17 @@ void Engine::Render()
 	presentInfo.pImageIndices = &imageIndex;
 
 	// end of "this frame"
-	vkQueuePresentKHR(GraphicsQueue, &presentInfo);
+	result = vkQueuePresentKHR(GraphicsQueue, &presentInfo);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	{
+		RecreateSwapchain();
+	}
+	else if (result != VK_SUCCESS)
+	{
+		std::cout << "swapchain bad 2 \n";
+		return;
+	}
+
 	// vkQueueWaitIdle(GraphicsQueue); // naively wait for graphics to finish...
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -275,7 +327,7 @@ void Engine::CreateDevice()
 
 }
 
-void Engine::CreateSwapChain()
+void Engine::CreateSwapchain()
 {
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &capabilities);
@@ -288,7 +340,7 @@ void Engine::CreateSwapChain()
 
 	VkSurfaceFormatKHR surfaceFormat = availableFormats[0];
 	VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-	VkExtent2D extent = { 1280, 720 };
+	VkExtent2D extent = { winWidth, winHeight };
 
 	uint32_t imageCount = capabilities.minImageCount + 1; // not mindful of max image count !
 
@@ -397,15 +449,15 @@ void Engine::CreateGraphicsPipeline()
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = 1280.0f;
-	viewport.height = 720.0f;
+	viewport.width = static_cast<float>(winWidth);
+	viewport.height = static_cast<float>(winHeight);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	//
 	VkRect2D scissor = {};
 	scissor.offset = { 0, 0 };
-	scissor.extent = { 1280, 720 };
+	scissor.extent = { winWidth, winHeight };
 
 	//
 	VkPipelineViewportStateCreateInfo viewportState = {};
@@ -551,8 +603,8 @@ void Engine::CreateFramebuffers()
 		createInfo.renderPass = RenderPass;
 		createInfo.attachmentCount = 1;
 		createInfo.pAttachments = attachments;
-		createInfo.width = 1280;
-		createInfo.height = 720;
+		createInfo.width = winWidth;
+		createInfo.height = winHeight;
 		createInfo.layers = 1;
 
 		VkResult result = vkCreateFramebuffer(Device, &createInfo, nullptr, &SwapChainFramebuffers[i]);
@@ -614,7 +666,7 @@ void Engine::CreateCommandBuffers()
 		passInfo.renderPass = RenderPass;
 		passInfo.framebuffer = SwapChainFramebuffers[i];
 		passInfo.renderArea.offset = { 0, 0 };
-		passInfo.renderArea.extent = { 1280, 720 };
+		passInfo.renderArea.extent = { winWidth, winHeight };
 		passInfo.clearValueCount = 1;
 		passInfo.pClearValues = &clearColor;
 
@@ -653,6 +705,22 @@ void Engine::CreateSemaphores()
 		vkCreateSemaphore(Device, &createInfo, nullptr, &renderFinishedSemaphores[i]);
 		vkCreateFence(Device, &fenceInfo, nullptr, &inFlightFences[i]);
 	}
+}
+
+
+void Engine::RecreateSwapchain()
+{
+	std::cout << "Recreating swapchain\n";
+	vkDeviceWaitIdle(Device);
+
+	CleanupSwapchain();
+
+	CreateSwapchain();
+	CreateImageViews();
+	CreateRenderPass();
+	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandBuffers();
 }
 
 VkShaderModule Engine::CreateShaderModule(const std::vector<char>& code)

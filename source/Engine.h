@@ -13,6 +13,9 @@ public:
 
 	SDL_Window* Window = nullptr;
 
+	uint32_t winWidth = 1280;
+	uint32_t winHeight = 720;
+
 	VkInstance Instance = nullptr;
 	VkPhysicalDevice PhysicalDevice = nullptr;
 	VkDevice Device = nullptr;
@@ -76,7 +79,7 @@ private:
 	void SelectPhysicalDevice();
 	void CreateDevice();
 	// Swapchain
-	void CreateSwapChain();
+	void CreateSwapchain();
 	void CreateImageViews();
 
 	void CreateGraphicsPipeline();
@@ -88,6 +91,9 @@ private:
 	void CreateCommandBuffers();
 
 	void CreateSemaphores();
+
+	void CleanupSwapchain();
+	void RecreateSwapchain();
 
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 };
