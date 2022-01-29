@@ -67,9 +67,12 @@ void Engine::Initialize()
 
 void Engine::Cleanup()
 {
-	vkDestroySemaphore(Device, renderFinishedSemaphore, nullptr);
-	vkDestroySemaphore(Device, imageAvailableSemaphore, nullptr);
-
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	{
+		vkDestroySemaphore(Device, renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(Device, imageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(Device, inFlightFences[i], nullptr);
+	}
 	vkDestroyCommandPool(Device, CommandPool, nullptr);
 	for (auto framebuffer : SwapChainFramebuffers)
 	{
@@ -91,12 +94,24 @@ void Engine::Cleanup()
 
 void Engine::Render()
 {
-	uint32_t imageIndex = 0;
-	vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	// "next frame ..."
+	vkWaitForFences(Device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+	// this frame
+	uint32_t imageIndex = 0;
+	vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	// check if a previous frame is using this image
+	if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+	{
+		vkWaitForFences(Device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+	}
+	// mark image as in use for this frame
+	imagesInFlight[imageIndex] = inFlightFences[currentFrame];
+
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT }; // subpass dependencies can resolve this or something
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -108,7 +123,9 @@ void Engine::Render()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	VkResult result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkResetFences(Device, 1, &inFlightFences[currentFrame]);
+
+	VkResult result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
 	if (result != VK_SUCCESS)
 	{
 		std::cout << "OUCH!!!\n";
@@ -125,8 +142,11 @@ void Engine::Render()
 	presentInfo.pSwapchains = swapchains;
 	presentInfo.pImageIndices = &imageIndex;
 
+	// end of "this frame"
 	vkQueuePresentKHR(GraphicsQueue, &presentInfo);
-	vkQueueWaitIdle(GraphicsQueue);
+	// vkQueueWaitIdle(GraphicsQueue); // naively wait for graphics to finish...
+
+	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void Engine::CreateInstance()
@@ -614,12 +634,25 @@ void Engine::CreateCommandBuffers()
 
 void Engine::CreateSemaphores()
 {
+	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+	imagesInFlight.resize(SwapChainImages.size(), VK_NULL_HANDLE);
+
 	VkSemaphoreCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	
-	// lol ignore result
-	vkCreateSemaphore(Device, &createInfo, nullptr, &imageAvailableSemaphore);
-	vkCreateSemaphore(Device, &createInfo, nullptr, &renderFinishedSemaphore);
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // first frame 
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	{
+		// lol ignore result
+		vkCreateSemaphore(Device, &createInfo, nullptr, &imageAvailableSemaphores[i]);
+		vkCreateSemaphore(Device, &createInfo, nullptr, &renderFinishedSemaphores[i]);
+		vkCreateFence(Device, &fenceInfo, nullptr, &inFlightFences[i]);
+	}
 }
 
 VkShaderModule Engine::CreateShaderModule(const std::vector<char>& code)

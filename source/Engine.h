@@ -32,8 +32,14 @@ public:
 
 	std::vector<VkFramebuffer> SwapChainFramebuffers;
 
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
+	std::vector<VkSemaphore> imageAvailableSemaphores;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> inFlightFences;
+	std::vector<VkFence> imagesInFlight;
+	uint32_t currentFrame = 0;
+
+	const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
 
 	VkRenderPass RenderPass;
 	VkPipelineLayout PipelineLayout;
@@ -42,6 +48,7 @@ public:
 
 	VkCommandPool CommandPool;
 	std::vector<VkCommandBuffer> CommandBuffers;
+
 
 	const std::vector<const char*> AdditionalExtensions =
 	{
