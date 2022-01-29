@@ -32,6 +32,10 @@ Engine::Engine()
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandPool();
+	CreateCommandBuffers();
+	CreateSemaphores();
 
 	std::cout << "Main loop started\n";
 
@@ -45,19 +49,13 @@ Engine::Engine()
 				break;
 			}
 		}
+
+		Render();
 	}
 
-	vkDestroyPipeline(Device, GraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-	vkDestroyRenderPass(Device, RenderPass, nullptr);
-	for (auto imageView : SwapChainImageViews)
-	{
-		vkDestroyImageView(Device, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(Device, SwapChain, nullptr);
-	vkDestroyDevice(Device, nullptr);
-	vkDestroySurfaceKHR(Instance, Surface, nullptr);
-	vkDestroyInstance(Instance, nullptr);
+	vkDeviceWaitIdle(Device);
+
+	Cleanup();
 
 	SDL_DestroyWindow(Window);
 	SDL_Quit();
@@ -69,6 +67,66 @@ void Engine::Initialize()
 
 void Engine::Cleanup()
 {
+	vkDestroySemaphore(Device, renderFinishedSemaphore, nullptr);
+	vkDestroySemaphore(Device, imageAvailableSemaphore, nullptr);
+
+	vkDestroyCommandPool(Device, CommandPool, nullptr);
+	for (auto framebuffer : SwapChainFramebuffers)
+	{
+		vkDestroyFramebuffer(Device, framebuffer, nullptr);
+	}
+	vkDestroyPipeline(Device, GraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	vkDestroyRenderPass(Device, RenderPass, nullptr);
+	for (auto imageView : SwapChainImageViews)
+	{
+		vkDestroyImageView(Device, imageView, nullptr);
+	}
+	vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+	vkDestroyDevice(Device, nullptr);
+	vkDestroySurfaceKHR(Instance, Surface, nullptr);
+	vkDestroyInstance(Instance, nullptr);
+
+}
+
+void Engine::Render()
+{
+	uint32_t imageIndex = 0;
+	vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &CommandBuffers[imageIndex];
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	VkResult result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "OUCH!!!\n";
+		throw std::runtime_error("oops\n");
+	}
+
+	VkSwapchainKHR swapchains[] = { Swapchain };
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapchains;
+	presentInfo.pImageIndices = &imageIndex;
+
+	vkQueuePresentKHR(GraphicsQueue, &presentInfo);
+	vkQueueWaitIdle(GraphicsQueue);
 }
 
 void Engine::CreateInstance()
@@ -230,17 +288,17 @@ void Engine::CreateSwapChain()
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	VkResult result = vkCreateSwapchainKHR(Device, &createInfo, nullptr, &SwapChain);
+	VkResult result = vkCreateSwapchainKHR(Device, &createInfo, nullptr, &Swapchain);
 	if (result != VK_SUCCESS)
 	{
 		std::cout << "Swapchain failed to create\n";
 		return;
 	}
 
-	vkGetSwapchainImagesKHR(Device, SwapChain, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(Device, Swapchain, &imageCount, nullptr);
 
 	SwapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(Device, SwapChain, &imageCount, SwapChainImages.data());
+	vkGetSwapchainImagesKHR(Device, Swapchain, &imageCount, SwapChainImages.data());
 
 	SwapChainImageFormat = surfaceFormat.format;
 	SwapChainExtent = extent;
@@ -458,6 +516,110 @@ void Engine::CreateRenderPass()
 		return;
 	}
 
+}
+
+void Engine::CreateFramebuffers()
+{
+	SwapChainFramebuffers.resize(SwapChainImageViews.size());
+
+	for (size_t i = 0; i < SwapChainImageViews.size(); i++)
+	{
+		VkImageView attachments[] = { SwapChainImageViews[i] };
+
+		VkFramebufferCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		createInfo.renderPass = RenderPass;
+		createInfo.attachmentCount = 1;
+		createInfo.pAttachments = attachments;
+		createInfo.width = 1280;
+		createInfo.height = 720;
+		createInfo.layers = 1;
+
+		VkResult result = vkCreateFramebuffer(Device, &createInfo, nullptr, &SwapChainFramebuffers[i]);
+		if (result != VK_SUCCESS)
+		{
+			std::cout << "framebuffer " << i << " failed\n";
+			return;
+		}
+	}
+}
+
+void Engine::CreateCommandPool()
+{
+	VkCommandPoolCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	createInfo.queueFamilyIndex = GraphicsFamily;
+
+	VkResult result = vkCreateCommandPool(Device, &createInfo, nullptr, &CommandPool);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "command pool\n";
+		return;
+	}
+}
+
+void Engine::CreateCommandBuffers()
+{
+	CommandBuffers.resize(SwapChainFramebuffers.size());
+
+	VkCommandBufferAllocateInfo allocation = {};
+	allocation.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocation.commandPool = CommandPool;
+	allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocation.commandBufferCount = static_cast<uint32_t>(CommandBuffers.size());
+
+	VkResult result = vkAllocateCommandBuffers(Device, &allocation, CommandBuffers.data());
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "Command buffers fail\n";
+		return;
+	}
+
+	for (size_t i = 0; i < CommandBuffers.size(); i++)
+	{
+		VkCommandBufferBeginInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		
+		result = vkBeginCommandBuffer(CommandBuffers[i], &bufferInfo);
+		if (result != VK_SUCCESS)
+		{
+			std::cout << "recording failed\n";
+			return;
+		}
+
+		VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f }} };
+
+		VkRenderPassBeginInfo passInfo = {};
+		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		passInfo.renderPass = RenderPass;
+		passInfo.framebuffer = SwapChainFramebuffers[i];
+		passInfo.renderArea.offset = { 0, 0 };
+		passInfo.renderArea.extent = { 1280, 720 };
+		passInfo.clearValueCount = 1;
+		passInfo.pClearValues = &clearColor;
+
+		vkCmdBeginRenderPass(CommandBuffers[i], &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBindPipeline(CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
+		vkCmdDraw(CommandBuffers[i], 3, 1, 0, 0);
+		vkCmdEndRenderPass(CommandBuffers[i]);
+
+		result = vkEndCommandBuffer(CommandBuffers[i]);
+		if (result != VK_SUCCESS)
+		{
+			std::cout << "recording failed 2\n";
+			return;
+		}
+	}
+}
+
+void Engine::CreateSemaphores()
+{
+	VkSemaphoreCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	
+	// lol ignore result
+	vkCreateSemaphore(Device, &createInfo, nullptr, &imageAvailableSemaphore);
+	vkCreateSemaphore(Device, &createInfo, nullptr, &renderFinishedSemaphore);
 }
 
 VkShaderModule Engine::CreateShaderModule(const std::vector<char>& code)

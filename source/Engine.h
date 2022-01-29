@@ -16,7 +16,7 @@ public:
 	VkInstance Instance = nullptr;
 	VkPhysicalDevice PhysicalDevice = nullptr;
 	VkDevice Device = nullptr;
-	VkSwapchainKHR SwapChain = nullptr;
+	VkSwapchainKHR Swapchain = nullptr;
 
 	uint32_t GraphicsFamily = 0;
 
@@ -30,10 +30,18 @@ public:
 
 	std::vector<VkImageView> SwapChainImageViews;
 
+	std::vector<VkFramebuffer> SwapChainFramebuffers;
+
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
+
 	VkRenderPass RenderPass;
 	VkPipelineLayout PipelineLayout;
 
 	VkPipeline GraphicsPipeline;
+
+	VkCommandPool CommandPool;
+	std::vector<VkCommandBuffer> CommandBuffers;
 
 	const std::vector<const char*> AdditionalExtensions =
 	{
@@ -54,6 +62,8 @@ private:
 	void Initialize();
 	void Cleanup();
 
+	void Render();
+
 	void CreateInstance();
 	void CreateSurface();
 	void SelectPhysicalDevice();
@@ -64,6 +74,13 @@ private:
 
 	void CreateGraphicsPipeline();
 	void CreateRenderPass();
+
+	void CreateFramebuffers();
+
+	void CreateCommandPool();
+	void CreateCommandBuffers();
+
+	void CreateSemaphores();
 
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 };
