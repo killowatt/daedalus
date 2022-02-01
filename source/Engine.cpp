@@ -39,6 +39,7 @@ Engine::Engine()
 	CreateFramebuffers();
 	CreateCommandPool();
 	CreateVertexBuffer();
+	CreateIndexBuffer();
 	CreateCommandBuffers();
 	CreateSemaphores();
 
@@ -83,6 +84,7 @@ void Engine::Cleanup()
 {
 	CleanupSwapchain();
 
+	vmaDestroyBuffer(Allocator, IndexBuffer, IndexBufferAllocation);
 	vmaDestroyBuffer(Allocator, VertexBuffer, VertexBufferAllocation);
 	vmaDestroyAllocator(Allocator);
 
@@ -698,8 +700,10 @@ void Engine::CreateCommandBuffers()
 		VkBuffer vertexBuffers[] = { VertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(CommandBuffers[i], 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(CommandBuffers[i], IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-		vkCmdDraw(CommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		//vkCmdDraw(CommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		vkCmdDrawIndexed(CommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(CommandBuffers[i]);
 
@@ -737,6 +741,26 @@ void Engine::CreateVertexBuffer()
 	vmaUnmapMemory(Allocator, VertexBufferAllocation);
 
 	//  vmaFlushAllocation() // might be necessary eventually someday
+}
+
+void Engine::CreateIndexBuffer()
+{
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(indices[0]) * indices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VmaAllocationCreateInfo allocationInfo = {};
+	allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+	vmaCreateBuffer(Allocator, &bufferInfo, &allocationInfo, &IndexBuffer, &IndexBufferAllocation, nullptr);
+
+	void* data;
+	vmaMapMemory(Allocator, IndexBufferAllocation, &data);
+	memcpy(data, indices.data(), (size_t)bufferInfo.size);
+	vmaUnmapMemory(Allocator, IndexBufferAllocation);
 }
 
 void Engine::CreateSemaphores()
