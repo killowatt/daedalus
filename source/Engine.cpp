@@ -2,6 +2,9 @@
 
 #include "SDL2/SDL_vulkan.h"
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include "File.h"
 
 Engine::Engine()
@@ -15,7 +18,7 @@ Engine::Engine()
 		"Hello World",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		1280, 720,
-		SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+		SDL_WINDOW_VULKAN
 	);
 
 	if (Window == NULL)
@@ -28,12 +31,14 @@ Engine::Engine()
 	CreateSurface();
 	SelectPhysicalDevice();
 	CreateDevice();
+	CreateMemoryAllocator();
 	CreateSwapchain();
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
+	CreateVertexBuffer();
 	CreateCommandBuffers();
 	CreateSemaphores();
 
@@ -77,6 +82,9 @@ void Engine::Initialize()
 void Engine::Cleanup()
 {
 	CleanupSwapchain();
+
+	vmaDestroyBuffer(Allocator, VertexBuffer, VertexBufferAllocation);
+	vmaDestroyAllocator(Allocator);
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
@@ -327,6 +335,17 @@ void Engine::CreateDevice()
 
 }
 
+void Engine::CreateMemoryAllocator()
+{
+	VmaAllocatorCreateInfo createInfo = {};
+	createInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+	createInfo.physicalDevice = PhysicalDevice;
+	createInfo.device = Device;
+	createInfo.instance = Instance;
+
+	vmaCreateAllocator(&createInfo, &Allocator);
+}
+
 void Engine::CreateSwapchain()
 {
 	VkSurfaceCapabilitiesKHR capabilities;
@@ -432,12 +451,15 @@ void Engine::CreateGraphicsPipeline()
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderStage, fragmentShaderStage };
 
 	//
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
 	VkPipelineVertexInputStateCreateInfo vertexInput = {};
 	vertexInput.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInput.vertexBindingDescriptionCount = 0;
-	vertexInput.pVertexBindingDescriptions = nullptr;
-	vertexInput.vertexAttributeDescriptionCount = 0;
-	vertexInput.pVertexAttributeDescriptions = nullptr;
+	vertexInput.vertexBindingDescriptionCount = 1;
+	vertexInput.pVertexBindingDescriptions = &bindingDescription;
+	vertexInput.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInput.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	//
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -672,7 +694,13 @@ void Engine::CreateCommandBuffers()
 
 		vkCmdBeginRenderPass(CommandBuffers[i], &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
-		vkCmdDraw(CommandBuffers[i], 3, 1, 0, 0);
+
+		VkBuffer vertexBuffers[] = { VertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(CommandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+		vkCmdDraw(CommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
 		vkCmdEndRenderPass(CommandBuffers[i]);
 
 		result = vkEndCommandBuffer(CommandBuffers[i]);
@@ -682,6 +710,33 @@ void Engine::CreateCommandBuffers()
 			return;
 		}
 	}
+}
+
+void Engine::CreateVertexBuffer()
+{
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VmaAllocationCreateInfo allocationInfo = {};
+	allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+	VkResult result = vmaCreateBuffer(Allocator, &bufferInfo, &allocationInfo, &VertexBuffer, &VertexBufferAllocation, nullptr);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "alloc failed\n";
+		return;
+	}
+
+	void* data;
+	vmaMapMemory(Allocator, VertexBufferAllocation, &data);
+	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+	vmaUnmapMemory(Allocator, VertexBufferAllocation);
+
+	//  vmaFlushAllocation() // might be necessary eventually someday
 }
 
 void Engine::CreateSemaphores()
