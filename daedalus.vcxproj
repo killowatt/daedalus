@@ -11,13 +11,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\Common.cpp" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\File.cpp" />
     <ClCompile Include="source\Main.cpp" />
+    <ClCompile Include="source\VulkanDevice.cpp" />
+    <ClCompile Include="source\VulkanSwapChain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\Common.h" />
     <ClInclude Include="source\Engine.h" />
     <ClInclude Include="source\File.h" />
+    <ClInclude Include="source\VulkanDevice.h" />
+    <ClInclude Include="source\VulkanSwapChain.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

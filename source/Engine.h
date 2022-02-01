@@ -9,6 +9,9 @@
 #include <iostream>
 #include <array>
 
+#include "VulkanDevice.h"
+#include "VulkanSwapChain.h"
+
 class Engine
 {
 public:
@@ -22,7 +25,10 @@ public:
 	VkInstance Instance = nullptr;
 	VkPhysicalDevice PhysicalDevice = nullptr;
 	VkDevice Device = nullptr;
-	VkSwapchainKHR Swapchain = nullptr;
+	//VkSwapchainKHR Swapchain = nullptr;
+
+	VulkanDevice NewDevice;
+	VulkanSwapchain NewSwapChain;
 
 	VmaAllocator Allocator;
 
@@ -32,13 +38,13 @@ public:
 
 	VkSurfaceKHR Surface = nullptr;
 
-	std::vector<VkImage> SwapChainImages;
-	VkFormat SwapChainImageFormat;
-	VkExtent2D SwapChainExtent;
+	//std::vector<VkImage> SwapChainImages;
+	//VkFormat SwapChainImageFormat;
+	//VkExtent2D SwapChainExtent;
 
-	std::vector<VkImageView> SwapChainImageViews;
+	//std::vector<VkImageView> SwapChainImageViews;
 
-	std::vector<VkFramebuffer> SwapChainFramebuffers;
+	//std::vector<VkFramebuffer> SwapChainFramebuffers;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -53,7 +59,7 @@ public:
 	VkBuffer IndexBuffer;
 	VmaAllocation IndexBufferAllocation;
 
-	VkRenderPass RenderPass;
+	//VkRenderPass RenderPass;
 	VkPipelineLayout PipelineLayout;
 
 	VkPipeline GraphicsPipeline;
