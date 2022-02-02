@@ -24,27 +24,19 @@ public:
 
 	VkInstance Instance = nullptr;
 	VkPhysicalDevice PhysicalDevice = nullptr;
-	VkDevice Device = nullptr;
+	// VkDevice Device = nullptr;
 	//VkSwapchainKHR Swapchain = nullptr;
 
-	VulkanDevice NewDevice;
+	VulkanDevice* NewDevice;
 	VulkanSwapchain NewSwapChain;
 
 	VmaAllocator Allocator;
 
-	uint32_t GraphicsFamily = 0;
+	// uint32_t GraphicsFamily = 0;
 
-	VkQueue GraphicsQueue = nullptr;
+	// VkQueue GraphicsQueue = nullptr;
 
 	VkSurfaceKHR Surface = nullptr;
-
-	//std::vector<VkImage> SwapChainImages;
-	//VkFormat SwapChainImageFormat;
-	//VkExtent2D SwapChainExtent;
-
-	//std::vector<VkImageView> SwapChainImageViews;
-
-	//std::vector<VkFramebuffer> SwapChainFramebuffers;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;

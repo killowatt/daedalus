@@ -60,7 +60,7 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	VkResult result = vkCreateSwapchainKHR(Device->Device, &swapchainInfo, nullptr, &Swapchain);
-	CriticalAssert(result == VK_SUCCESS, "Swapchain creation failed");
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain creation failed");
 
 	SwapChainImages.resize(imageCount);
 	vkGetSwapchainImagesKHR(Device->Device, Swapchain, &imageCount, SwapChainImages.data());
@@ -90,7 +90,7 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 		createInfo.subresourceRange.layerCount = 1;
 
 		VkResult result = vkCreateImageView(Device->Device, &createInfo, nullptr, &SwapChainImageViews[i]);
-		CriticalAssert(result == VK_SUCCESS, "Swapchain creation failed");
+		CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain creation failed");
 	}
 
 	// Render Pass
@@ -120,7 +120,7 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	createInfo.pSubpasses = &subpass;
 
 	result = vkCreateRenderPass(Device->Device, &createInfo, nullptr, &RenderPass);
-	CriticalAssert(result == VK_SUCCESS, "Swapchain creation failed");
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain creation failed");
 
 	// Framebuffers
 	SwapChainFramebuffers.resize(SwapChainImageViews.size());
@@ -139,8 +139,12 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 		createInfo.layers = 1;
 
 		result = vkCreateFramebuffer(Device->Device, &createInfo, nullptr, &SwapChainFramebuffers[i]);
-		CriticalAssert(result == VK_SUCCESS, "Swapchain!!!");
+		CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain!!!");
 	}
+
+
+	// Endlog
+	printf("# of images : %d\n", SwapChainImages.size());
 }
 
 void VulkanSwapchain::NextImage(VkSemaphore semaphore, uint32_t* imageIndex)
@@ -148,11 +152,11 @@ void VulkanSwapchain::NextImage(VkSemaphore semaphore, uint32_t* imageIndex)
 	VkResult result = vkAcquireNextImageKHR(Device->Device, Swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, imageIndex);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		CriticalError("WOOPS");
+		CRITICAL_ERROR("WOOPS");
 	}
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 	{
-		CriticalError("swapchain bad");
+		CRITICAL_ERROR("swapchain bad");
 	}
 }
 
@@ -170,8 +174,8 @@ void VulkanSwapchain::Present(uint32_t imageIndex, VkSemaphore semaphore)
 	if (result == VK_ERROR_OUT_OF_DATE_KHR ||
 		result == VK_SUBOPTIMAL_KHR)
 	{
-		CriticalError("swapchain suboptimial/out of date");
+		CRITICAL_ERROR("swapchain suboptimial/out of date");
 	}
 
-	currentFrame = (currentFrame + 1) % maxFramesInFlight;
+	//currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }

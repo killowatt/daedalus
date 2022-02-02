@@ -19,8 +19,8 @@ public: // TODO: not public?
 
 	VkRenderPass RenderPass;
 
-	uint32_t currentFrame = 0;
-	uint32_t maxFramesInFlight = 2;
+	//uint32_t currentFrame = 0;
+	//uint32_t maxFramesInFlight = 2;
 
 	std::vector<VkImage> SwapChainImages;
 	std::vector<VkImageView> SwapChainImageViews;
@@ -29,10 +29,10 @@ public: // TODO: not public?
 	VkFormat SwapChainImageFormat;
 	VkExtent2D SwapChainExtent;
 
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
-	std::vector<VkFence> inFlightFences;
-	std::vector<VkFence> imagesInFlight;
+	//std::vector<VkSemaphore> imageAvailableSemaphores;
+	//std::vector<VkSemaphore> renderFinishedSemaphores;
+	//std::vector<VkFence> inFlightFences;
+	//std::vector<VkFence> imagesInFlight;
 
 public:
 	void Create(uint32_t width, uint32_t height);
