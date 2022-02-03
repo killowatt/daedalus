@@ -38,18 +38,27 @@ public:
 
 	VkSurfaceKHR Surface = nullptr;
 
+	//VkDescriptorSetLayout descriptorSetLayout;
+	VkPipelineLayout pipelineLayout;
+
+	const uint32_t MAX_FRAMES_AHEAD = 2;
+	// VkSemaphore imageAvailableSemaphores[MAX_FRAMES_AHEAD];
+
+	// TODO: replace with statically allocated ^
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
 	std::vector<VkFence> imagesInFlight;
 	uint32_t currentFrame = 0;
 
-	const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
 
 	VkBuffer VertexBuffer;
 	VmaAllocation VertexBufferAllocation;
 	VkBuffer IndexBuffer;
 	VmaAllocation IndexBufferAllocation;
+
+	
 
 	//VkRenderPass RenderPass;
 	VkPipelineLayout PipelineLayout;
@@ -116,6 +125,12 @@ public:
 		0, 1, 2, 2, 3, 0
 	};
 
+	struct UniformBufferObject {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+	};
+
 private:
 	void Initialize();
 	void Cleanup();
@@ -132,6 +147,7 @@ private:
 	void CreateSwapchain();
 	void CreateImageViews();
 
+	void CreateDescriptorSetLayout();
 	void CreateGraphicsPipeline();
 	void CreateRenderPass();
 

@@ -91,3 +91,8 @@ void VulkanDevice::Initialize()
 
 	vmaCreateAllocator(&allocatorInfo, &Allocator);
 }
+
+void VulkanDevice::Present()
+{
+
+}

@@ -144,12 +144,12 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 
 
 	// Endlog
-	printf("# of images : %d\n", SwapChainImages.size());
+	printf("# of images : %zd\n", SwapChainImages.size());
 }
 
-void VulkanSwapchain::NextImage(VkSemaphore semaphore, uint32_t* imageIndex)
+int VulkanSwapchain::NextImage(VkSemaphore semaphore)
 {
-	VkResult result = vkAcquireNextImageKHR(Device->Device, Swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, imageIndex);
+	VkResult result = vkAcquireNextImageKHR(Device->Device, Swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &CurrentImage);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
 		CRITICAL_ERROR("WOOPS");
@@ -158,17 +158,19 @@ void VulkanSwapchain::NextImage(VkSemaphore semaphore, uint32_t* imageIndex)
 	{
 		CRITICAL_ERROR("swapchain bad");
 	}
+
+	return CurrentImage;
 }
 
-void VulkanSwapchain::Present(uint32_t imageIndex, VkSemaphore semaphore)
+void VulkanSwapchain::Present(VkSemaphore waitSemaphore)
 {
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &Swapchain;
-	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pImageIndices = &CurrentImage;
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &semaphore;
+	presentInfo.pWaitSemaphores = &waitSemaphore;
 
 	VkResult result = vkQueuePresentKHR(PresentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR ||

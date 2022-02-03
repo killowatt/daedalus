@@ -48,6 +48,7 @@ Engine::Engine()
 	//CreateImageViews();
 
 	//CreateRenderPass();
+	CreateDescriptorSetLayout();
 	CreateGraphicsPipeline();
 	//CreateFramebuffers();
 	CreateCommandPool();
@@ -101,7 +102,7 @@ void Engine::Cleanup()
 	vmaDestroyBuffer(Allocator, VertexBuffer, VertexBufferAllocation);
 	vmaDestroyAllocator(Allocator);
 
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	for (uint32_t i = 0; i < MAX_FRAMES_AHEAD; i++)
 	{
 		vkDestroySemaphore(NewDevice->Device, renderFinishedSemaphores[i], nullptr);
 		vkDestroySemaphore(NewDevice->Device, imageAvailableSemaphores[i], nullptr);
@@ -149,49 +150,29 @@ void Engine::CleanupSwapchain()
 
 void Engine::Render()
 {
-	// "next frame ..."
 	vkWaitForFences(NewDevice->Device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+	vkResetFences(NewDevice->Device, 1, &inFlightFences[currentFrame]);
 
-	// this frame
-	uint32_t imageIndex = 0;
-	NewSwapChain.NextImage(imageAvailableSemaphores[currentFrame], &imageIndex);
+	uint32_t imageIndex = NewSwapChain.NextImage(imageAvailableSemaphores[currentFrame]);
 
-	// check if a previous frame is using this image
-	if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-	{
-		vkWaitForFences(NewDevice->Device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-	}
-	// mark image as in use for this frame
-	imagesInFlight[imageIndex] = inFlightFences[currentFrame];
-
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT }; // subpass dependencies can resolve this or something
+	VkPipelineStageFlags stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pWaitDstStageMask = &stageFlags;
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &CommandBuffers[imageIndex];
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	vkResetFences(NewDevice->Device, 1, &inFlightFences[currentFrame]);
+	submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
 
 	VkResult result = vkQueueSubmit(NewDevice->GraphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
-	if (result != VK_SUCCESS)
-	{
-		std::cout << "OUCH!!!\n";
-		throw std::runtime_error("oops\n");
-	}
+	CRITICAL_ASSERT(result == VK_SUCCESS, "queue submit fail");
 
-	NewSwapChain.Present(imageIndex, renderFinishedSemaphores[currentFrame]);
-
-	// vkQueueWaitIdle(GraphicsQueue); // naively wait for graphics to finish...
-
-	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	// Presentation
+	NewSwapChain.Present(renderFinishedSemaphores[currentFrame]);
+	currentFrame = (currentFrame + 1) % MAX_FRAMES_AHEAD;
 }
 
 void Engine::CreateInstance()
@@ -412,6 +393,23 @@ void Engine::CreateImageViews()
 	//}
 }
 
+void Engine::CreateDescriptorSetLayout()
+{
+	//VkDescriptorSetLayoutBinding layoutBinding = {};
+	//layoutBinding.binding = 0;
+	//layoutBinding.descriptorCount = 1;
+	//layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	//layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	//VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+	//layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	//layoutInfo.bindingCount = 1;
+	//layoutInfo.pBindings = &layoutBinding;
+
+	//VkResult result = vkCreateDescriptorSetLayout(NewDevice->Device, &layoutInfo, nullptr, &descriptorSetLayout);
+	//CRITICAL_ASSERT(result == VK_SUCCESS, "bind create fail");
+}
+
 void Engine::CreateGraphicsPipeline()
 {
 	//
@@ -524,7 +522,7 @@ void Engine::CreateGraphicsPipeline()
 	//
 	VkPipelineLayoutCreateInfo pipelineLayout = {};
 	pipelineLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	
+
 	VkResult result = vkCreatePipelineLayout(NewDevice->Device, &pipelineLayout, nullptr, &PipelineLayout);
 	if (result != VK_SUCCESS)
 	{
@@ -748,9 +746,9 @@ void Engine::CreateIndexBuffer()
 
 void Engine::CreateSemaphores()
 {
-	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+	imageAvailableSemaphores.resize(MAX_FRAMES_AHEAD);
+	renderFinishedSemaphores.resize(MAX_FRAMES_AHEAD);
+	inFlightFences.resize(MAX_FRAMES_AHEAD);
 	imagesInFlight.resize(NewSwapChain.SwapChainImages.size(), VK_NULL_HANDLE);
 
 	VkSemaphoreCreateInfo createInfo = {};
@@ -760,7 +758,7 @@ void Engine::CreateSemaphores()
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // first frame 
 
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	for (uint32_t i = 0; i < MAX_FRAMES_AHEAD; i++)
 	{
 		// lol ignore result
 		vkCreateSemaphore(NewDevice->Device, &createInfo, nullptr, &imageAvailableSemaphores[i]);

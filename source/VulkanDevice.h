@@ -23,10 +23,12 @@ public:
 	VkQueue PresentQueue = VK_NULL_HANDLE;
 	VkQueue TransferQueue = VK_NULL_HANDLE;
 
-	int32_t GraphicsFamily;
-	int32_t PresentFamily;
+	int32_t GraphicsFamily = -1;
+	int32_t PresentFamily = -1;
 
 	void Initialize();
+
+	void Present();
 
 protected:
 	const std::vector<const char*> DeviceExtensions =
