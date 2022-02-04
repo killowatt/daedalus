@@ -22,13 +22,13 @@ public:
 	uint32_t winWidth = 1280;
 	uint32_t winHeight = 720;
 
-	VkInstance Instance = nullptr;
-	VkPhysicalDevice PhysicalDevice = nullptr;
+	//VkInstance Instance = nullptr;
+	//VkPhysicalDevice PhysicalDevice = nullptr;
 	// VkDevice Device = nullptr;
 	//VkSwapchainKHR Swapchain = nullptr;
 
 	VulkanDevice* NewDevice;
-	VulkanSwapchain NewSwapChain;
+	// VulkanSwapchain NewSwapChain;
 
 	VmaAllocator Allocator;
 
@@ -68,22 +68,6 @@ public:
 	VkCommandPool CommandPool;
 	std::vector<VkCommandBuffer> CommandBuffers;
 
-
-	const std::vector<const char*> AdditionalExtensions =
-	{
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
-	};
-
-	const std::vector<const char*> ValidationLayers =
-	{
-		"VK_LAYER_KHRONOS_validation"
-	};
-
-	const std::vector<const char*> DeviceExtensions =
-	{
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
-
 	struct Vertex {
 		glm::vec2 pos;
 		glm::vec3 color;
@@ -115,10 +99,10 @@ public:
 	};
 
 	const std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.47f, 0.0f}},
+		{{0.5f, -0.5f}, {1.0f, 0.45f, 0.0f}},
+		{{0.5f, 0.5f}, {1.0f, 0.35f, 0.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 0.37f, 0.0f}}
 	};
 
 	const std::vector<uint16_t> indices = {

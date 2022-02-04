@@ -29,21 +29,22 @@ Engine::Engine()
 		return;
 	}
 
-	CreateInstance();
-	CreateSurface();
-	SelectPhysicalDevice();
+	// CreateInstance();
+	// CreateSurface();
+	// SelectPhysicalDevice();
 
-	NewDevice = new VulkanDevice(Instance, PhysicalDevice, Surface);
-	NewDevice->Initialize();
+	//NewDevice = new VulkanDevice(Instance, PhysicalDevice, Surface);
+	NewDevice = new VulkanDevice();
+	NewDevice->Initialize(Window);
 	Allocator = NewDevice->Allocator; // too lazy
 
 	//CreateDevice();
 	//CreateMemoryAllocator();
 
-	NewSwapChain.Device = NewDevice;
-	NewSwapChain.PresentQueue = NewDevice->PresentQueue;
-	NewSwapChain.Surface = Surface;
-	NewSwapChain.Create(1280, 720);
+	//NewSwapChain.Device = NewDevice;
+	//NewSwapChain.PresentQueue = NewDevice->PresentQueue;
+	//NewSwapChain.Surface = Surface;
+	//NewSwapChain.Create(1280, 720);
 	//CreateSwapchain();
 	//CreateImageViews();
 
@@ -122,8 +123,8 @@ void Engine::Cleanup()
 	//}
 	//vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 	// vkDestroyDevice(Device, nullptr);
-	vkDestroySurfaceKHR(Instance, Surface, nullptr);
-	vkDestroyInstance(Instance, nullptr);
+	//vkDestroySurfaceKHR(Instance, Surface, nullptr);
+	//vkDestroyInstance(Instance, nullptr);
 
 }
 
@@ -153,7 +154,7 @@ void Engine::Render()
 	vkWaitForFences(NewDevice->Device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 	vkResetFences(NewDevice->Device, 1, &inFlightFences[currentFrame]);
 
-	uint32_t imageIndex = NewSwapChain.NextImage(imageAvailableSemaphores[currentFrame]);
+	uint32_t imageIndex = NewDevice->Swapchain.NextImage(imageAvailableSemaphores[currentFrame]);
 
 	VkPipelineStageFlags stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
@@ -171,7 +172,7 @@ void Engine::Render()
 	CRITICAL_ASSERT(result == VK_SUCCESS, "queue submit fail");
 
 	// Presentation
-	NewSwapChain.Present(renderFinishedSemaphores[currentFrame]);
+	NewDevice->Swapchain.Present(renderFinishedSemaphores[currentFrame]);
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_AHEAD;
 }
 
@@ -179,63 +180,63 @@ void Engine::CreateInstance()
 {
 	// TODO: check what extensions are supported so we can return a list if we are missing one
 
-	VkApplicationInfo applicationInfo = {};
-	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	applicationInfo.pApplicationName = "Daedalus";
-	applicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	applicationInfo.apiVersion = VK_API_VERSION_1_0;
+	//VkApplicationInfo applicationInfo = {};
+	//applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	//applicationInfo.pApplicationName = "Daedalus";
+	//applicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+	//applicationInfo.apiVersion = VK_API_VERSION_1_0;
 
-	uint32_t extensionCount = 0;
-	SDL_Vulkan_GetInstanceExtensions(Window, &extensionCount, nullptr);
+	//uint32_t extensionCount = 0;
+	//SDL_Vulkan_GetInstanceExtensions(Window, &extensionCount, nullptr);
 
-	std::vector<const char*> extensions(extensionCount);
-	SDL_Vulkan_GetInstanceExtensions(Window, &extensionCount, extensions.data());
+	//std::vector<const char*> extensions(extensionCount);
+	//SDL_Vulkan_GetInstanceExtensions(Window, &extensionCount, extensions.data());
 
-	for (const char* extension : AdditionalExtensions)
-	{
-		extensions.push_back(extension);
-	}
+	//for (const char* extension : AdditionalExtensions)
+	//{
+	//	extensions.push_back(extension);
+	//}
 
-	VkInstanceCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &applicationInfo;
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
-	createInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayers.size());
-	createInfo.ppEnabledLayerNames = ValidationLayers.data();
+	//VkInstanceCreateInfo createInfo = {};
+	//createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	//createInfo.pApplicationInfo = &applicationInfo;
+	//createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	//createInfo.ppEnabledExtensionNames = extensions.data();
+	//createInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayers.size());
+	//createInfo.ppEnabledLayerNames = ValidationLayers.data();
 
-	VkResult result = vkCreateInstance(&createInfo, nullptr, &Instance);
-	if (result != VK_SUCCESS)
-	{
-		std::cout << "FAIL\n";
-		return;
-	}
+	//VkResult result = vkCreateInstance(&createInfo, nullptr, &Instance);
+	//if (result != VK_SUCCESS)
+	//{
+	//	std::cout << "FAIL\n";
+	//	return;
+	//}
 }
 
 void Engine::CreateSurface()
 {
-	SDL_Vulkan_CreateSurface(Window, Instance, &Surface);
+	//SDL_Vulkan_CreateSurface(Window, Instance, &Surface);
 }
 
 void Engine::SelectPhysicalDevice()
 {
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(Instance, &deviceCount, nullptr);
+	//uint32_t deviceCount = 0;
+	//vkEnumeratePhysicalDevices(Instance, &deviceCount, nullptr);
 
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(Instance, &deviceCount, devices.data());
+	//std::vector<VkPhysicalDevice> devices(deviceCount);
+	//vkEnumeratePhysicalDevices(Instance, &deviceCount, devices.data());
 
-	std::cout << deviceCount << " compatible physical device(s)\n";
-	for (VkPhysicalDevice device : devices)
-	{
-		VkPhysicalDeviceProperties deviceProperties;
-		vkGetPhysicalDeviceProperties(device, &deviceProperties);
+	//std::cout << deviceCount << " compatible physical device(s)\n";
+	//for (VkPhysicalDevice device : devices)
+	//{
+	//	VkPhysicalDeviceProperties deviceProperties;
+	//	vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
-		std::cout << deviceProperties.deviceName << "\n";
-	}
+	//	std::cout << deviceProperties.deviceName << "\n";
+	//}
 
-	PhysicalDevice = devices[0];
-	std::cout << "First physical device selected\n";
+	//PhysicalDevice = devices[0];
+	//std::cout << "First physical device selected\n";
 }
 
 void Engine::CreateDevice()
@@ -544,7 +545,7 @@ void Engine::CreateGraphicsPipeline()
 	createInfo.pColorBlendState = &colorBlending;
 	createInfo.pDynamicState = nullptr;
 	createInfo.layout = PipelineLayout;
-	createInfo.renderPass = NewSwapChain.RenderPass;
+	createInfo.renderPass = NewDevice->Swapchain.RenderPass;
 	createInfo.subpass = 0;
 
 	result = vkCreateGraphicsPipelines(NewDevice->Device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &GraphicsPipeline);
@@ -637,7 +638,7 @@ void Engine::CreateCommandPool()
 
 void Engine::CreateCommandBuffers()
 {
-	CommandBuffers.resize(NewSwapChain.SwapChainFramebuffers.size());
+	CommandBuffers.resize(NewDevice->Swapchain.SwapChainFramebuffers.size());
 
 	VkCommandBufferAllocateInfo allocation = {};
 	allocation.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -668,8 +669,8 @@ void Engine::CreateCommandBuffers()
 
 		VkRenderPassBeginInfo passInfo = {};
 		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		passInfo.renderPass = NewSwapChain.RenderPass;
-		passInfo.framebuffer = NewSwapChain.SwapChainFramebuffers[i];
+		passInfo.renderPass = NewDevice->Swapchain.RenderPass;
+		passInfo.framebuffer = NewDevice->Swapchain.SwapChainFramebuffers[i];
 		passInfo.renderArea.offset = { 0, 0 };
 		passInfo.renderArea.extent = { winWidth, winHeight };
 		passInfo.clearValueCount = 1;
@@ -749,7 +750,7 @@ void Engine::CreateSemaphores()
 	imageAvailableSemaphores.resize(MAX_FRAMES_AHEAD);
 	renderFinishedSemaphores.resize(MAX_FRAMES_AHEAD);
 	inFlightFences.resize(MAX_FRAMES_AHEAD);
-	imagesInFlight.resize(NewSwapChain.SwapChainImages.size(), VK_NULL_HANDLE);
+	imagesInFlight.resize(NewDevice->Swapchain.SwapChainImages.size(), VK_NULL_HANDLE);
 
 	VkSemaphoreCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;

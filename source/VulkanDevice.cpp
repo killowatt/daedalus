@@ -3,17 +3,26 @@
 #include "Common.h"
 #include "Engine.h"
 
+#include "SDL2/SDL_vulkan.h"
+
 #include <set>
 
-VulkanDevice::VulkanDevice(VkInstance instance, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+VkInstance VulkanDevice::Instance = VK_NULL_HANDLE;
+
+VulkanDevice::VulkanDevice()
 {
-	Instance = instance;
-	PhysicalDevice = physicalDevice;
-	Surface = surface;
 }
 
-void VulkanDevice::Initialize()
+void VulkanDevice::Initialize(SDL_Window* window)
 {
+	Window = window;
+
+	CRITICAL_ASSERT(Window != nullptr, "No window provided");
+
+	CreateInstance();
+	SDL_Vulkan_CreateSurface(Window, Instance, &Surface);
+	SelectDevice();
+
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &queueFamilyCount, nullptr);
 
@@ -90,9 +99,84 @@ void VulkanDevice::Initialize()
 	allocatorInfo.instance = Instance;
 
 	vmaCreateAllocator(&allocatorInfo, &Allocator);
+
+	// Swapchain
+	int32_t windowWidth = 0;
+	int32_t windowHeight = 0;
+	SDL_GetWindowSize(Window, &windowWidth, &windowHeight);
+
+	Swapchain.Device = this;
+	Swapchain.Surface = Surface;
+	Swapchain.PresentQueue = PresentQueue;
+	Swapchain.Create(windowWidth, windowHeight);
 }
 
 void VulkanDevice::Present()
+{
+
+}
+
+void VulkanDevice::CreateInstance()
+{
+	// TODO: check what extensions are supported so we can return a list if we are missing one
+	if (Instance != VK_NULL_HANDLE)
+		return; // Instance already created
+
+	VkApplicationInfo applicationInfo = {};
+	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	applicationInfo.pApplicationName = "Daedalus";
+	applicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+	applicationInfo.apiVersion = VK_API_VERSION_1_0;
+
+	uint32_t extensionCount = 0;
+	SDL_Vulkan_GetInstanceExtensions(Window, &extensionCount, nullptr);
+
+	std::vector<const char*> extensions(extensionCount);
+	SDL_Vulkan_GetInstanceExtensions(Window, &extensionCount, extensions.data());
+
+	for (const char* extension : AdditionalExtensions)
+	{
+		extensions.push_back(extension);
+	}
+
+	VkInstanceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pApplicationInfo = &applicationInfo;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	createInfo.ppEnabledExtensionNames = extensions.data();
+	createInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayers.size());
+	createInfo.ppEnabledLayerNames = ValidationLayers.data();
+
+	VkResult result = vkCreateInstance(&createInfo, nullptr, &Instance);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "FAIL\n";
+		return;
+	}
+}
+
+void VulkanDevice::SelectDevice()
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(Instance, &deviceCount, nullptr);
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(Instance, &deviceCount, devices.data());
+
+	LOG_VK("%d compatible physical device(s)", deviceCount);
+	for (VkPhysicalDevice device : devices)
+	{
+		VkPhysicalDeviceProperties deviceProperties;
+		vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+		std::cout << deviceProperties.deviceName << "\n";
+	}
+
+	PhysicalDevice = devices[0];
+	LOG_VK("First physical device selected");
+}
+
+void VulkanDevice::CreateDevice()
 {
 
 }
