@@ -21,7 +21,7 @@ Engine::Engine()
 		"Hello World",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		1280, 720,
-		SDL_WINDOW_VULKAN
+		SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
 	);
 
 	if (Window == nullptr)
@@ -99,9 +99,9 @@ void Engine::Cleanup()
 {
 	CleanupSwapchain();
 
-	vmaDestroyBuffer(Allocator, IndexBuffer, IndexBufferAllocation);
-	vmaDestroyBuffer(Allocator, VertexBuffer, VertexBufferAllocation);
-	vmaDestroyAllocator(Allocator);
+	//vmaDestroyBuffer(Allocator, IndexBuffer, IndexBufferAllocation);
+	//vmaDestroyBuffer(Allocator, Buffer, Allocation);
+	//vmaDestroyAllocator(Allocator);
 
 	//for (uint32_t i = 0; i < MAX_FRAMES_AHEAD; i++)
 	//{
@@ -151,7 +151,12 @@ void Engine::CleanupSwapchain()
 
 void Engine::Render()
 {
-	NewDevice->BeginFrame(VertexBuffer, IndexBuffer, indices.size(), GraphicsPipeline);
+	NewDevice->BeginFrame(Vb->Buffer, Ib->Buffer, indices.size(), GraphicsPipeline);
+
+	NewDevice->BindVertexBuffer(Vb);
+	NewDevice->BindIndexBuffer(Ib);
+
+	NewDevice->DrawIndexed(indices.size());
 
 	//uint32_t imageIndex = NewDevice->Swapchain.NextImage(NewDevice->imageAvailableSemaphores[NewDevice->currentFrame]);
 
@@ -660,7 +665,7 @@ void Engine::CreateCommandPool()
 
 void Engine::CreateCommandBuffers()
 {
-	CommandBuffers.resize(NewDevice->Swapchain.SwapChainFramebuffers.size());
+	CommandBuffers.resize(NewDevice->Swapchain.Framebuffers.size());
 
 	VkCommandBufferAllocateInfo allocation = {};
 	allocation.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -693,7 +698,7 @@ void Engine::CreateCommandBuffers()
 		VkRenderPassBeginInfo passInfo = {};
 		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		passInfo.renderPass = NewDevice->Swapchain.RenderPass;
-		passInfo.framebuffer = NewDevice->Swapchain.SwapChainFramebuffers[i];
+		passInfo.framebuffer = NewDevice->Swapchain.Framebuffers[i];
 		passInfo.renderArea.offset = { 0, 0 };
 		passInfo.renderArea.extent = { winWidth, winHeight };
 		passInfo.clearValueCount = 1;
@@ -723,49 +728,53 @@ void Engine::CreateCommandBuffers()
 
 void Engine::CreateVertexBuffer()
 {
-	VkBufferCreateInfo bufferInfo = {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	Vb = VulkanBuffer::Create(NewDevice, BufferType::Vertex, vertices.data(), vertices.size() * sizeof(Engine::Vertex));
 
-	VmaAllocationCreateInfo allocationInfo = {};
-	allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-	allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+	//VkBufferCreateInfo bufferInfo = {};
+	//bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	//bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	//bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	//bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	VkResult result = vmaCreateBuffer(Allocator, &bufferInfo, &allocationInfo, &VertexBuffer, &VertexBufferAllocation, nullptr);
-	if (result != VK_SUCCESS)
-	{
-		std::cout << "alloc failed\n";
-		return;
-	}
+	//VmaAllocationCreateInfo allocationInfo = {};
+	//allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	//allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-	void* data;
-	vmaMapMemory(Allocator, VertexBufferAllocation, &data);
-	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-	vmaUnmapMemory(Allocator, VertexBufferAllocation);
+	//VkResult result = vmaCreateBuffer(Allocator, &bufferInfo, &allocationInfo, &Buffer, &Allocation, nullptr);
+	//if (result != VK_SUCCESS)
+	//{
+	//	std::cout << "alloc failed\n";
+	//	return;
+	//}
+
+	//void* data;
+	//vmaMapMemory(Allocator, Allocation, &data);
+	//memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+	//vmaUnmapMemory(Allocator, Allocation);
 
 	//  vmaFlushAllocation() // might be necessary eventually someday
 }
 
 void Engine::CreateIndexBuffer()
 {
-	VkBufferCreateInfo bufferInfo = {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = sizeof(indices[0]) * indices.size();
-	bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	Ib = VulkanBuffer::Create(NewDevice, BufferType::Index, indices.data(), indices.size() * sizeof(uint16_t));
 
-	VmaAllocationCreateInfo allocationInfo = {};
-	allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-	allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+	//VkBufferCreateInfo bufferInfo = {};
+	//bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	//bufferInfo.size = sizeof(indices[0]) * indices.size();
+	//bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	//bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	vmaCreateBuffer(Allocator, &bufferInfo, &allocationInfo, &IndexBuffer, &IndexBufferAllocation, nullptr);
+	//VmaAllocationCreateInfo allocationInfo = {};
+	//allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	//allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-	void* data;
-	vmaMapMemory(Allocator, IndexBufferAllocation, &data);
-	memcpy(data, indices.data(), (size_t)bufferInfo.size);
-	vmaUnmapMemory(Allocator, IndexBufferAllocation);
+	//vmaCreateBuffer(Allocator, &bufferInfo, &allocationInfo, &IndexBuffer, &IndexBufferAllocation, nullptr);
+
+	//void* data;
+	//vmaMapMemory(Allocator, IndexBufferAllocation, &data);
+	//memcpy(data, indices.data(), (size_t)bufferInfo.size);
+	//vmaUnmapMemory(Allocator, IndexBufferAllocation);
 }
 
 void Engine::CreateSemaphores()

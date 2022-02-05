@@ -15,6 +15,7 @@
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\File.cpp" />
     <ClCompile Include="source\Main.cpp" />
+    <ClCompile Include="source\VulkanBuffer.cpp" />
     <ClCompile Include="source\VulkanDevice.cpp" />
     <ClCompile Include="source\VulkanSwapChain.cpp" />
   </ItemGroup>
@@ -22,6 +23,7 @@
     <ClInclude Include="source\Common.h" />
     <ClInclude Include="source\Engine.h" />
     <ClInclude Include="source\File.h" />
+    <ClInclude Include="source\VulkanBuffer.h" />
     <ClInclude Include="source\VulkanDevice.h" />
     <ClInclude Include="source\VulkanSwapChain.h" />
   </ItemGroup>

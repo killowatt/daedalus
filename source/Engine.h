@@ -10,7 +10,7 @@
 #include <array>
 
 #include "VulkanDevice.h"
-#include "VulkanSwapChain.h"
+#include "VulkanBuffer.h"
 
 class Engine
 {
@@ -51,13 +51,15 @@ public:
 	//std::vector<VkFence> imagesInFlight;
 	//uint32_t currentFrame = 0;
 
+	
 
+	//VkBuffer Buffer;
+	//VmaAllocation Allocation;
+	//VkBuffer IndexBuffer;
+	//VmaAllocation IndexBufferAllocation;
 
-	VkBuffer VertexBuffer;
-	VmaAllocation VertexBufferAllocation;
-	VkBuffer IndexBuffer;
-	VmaAllocation IndexBufferAllocation;
-
+	VulkanBuffer* Vb;
+	VulkanBuffer* Ib;
 	
 
 	//VkRenderPass RenderPass;

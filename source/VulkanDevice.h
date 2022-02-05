@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanSwapChain.h"
+#include "VulkanBuffer.h"
 
 #include "vulkan/vulkan.h"
 #include "vk_mem_alloc.h"
@@ -9,6 +10,7 @@
 #include <vector>
 
 class Engine;
+class VulkanBuffer;
 
 // We could abstract into a VulkanContext class that has an Instance and can handle multiple devices
 class VulkanDevice
@@ -29,7 +31,7 @@ public:
 	VmaAllocator Allocator = VK_NULL_HANDLE;
 	VulkanSwapchain Swapchain;
 
-	uint32_t currentFrame = 0;
+	uint32_t CurrentFrame = 0;
 
 	// Queues
 	int32_t GraphicsFamily = -1;
@@ -44,14 +46,20 @@ public:
 	std::vector<VkCommandBuffer> CommandBuffers;
 
 	// Sync Primitives
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
-	std::vector<VkFence> fences;
+	std::vector<VkSemaphore> ImageAvailableSemaphores;
+	std::vector<VkSemaphore> RenderFinishedSemaphores;
+	std::vector<VkFence> Fences;
 
 	void Initialize(SDL_Window* window);
 
-	void BeginFrame(VkBuffer VertexBuffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe);
+	void BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe);
 	void Present();
+
+	void BindVertexBuffer(const VulkanBuffer* const buffer);
+	void BindIndexBuffer(const VulkanBuffer* const buffer);
+	void DrawIndexed(size_t count);
+
+	void SetFramebuffer() {} // TODO:
 
 protected:
 	const uint32_t MAX_FRAMES_AHEAD = 2;
@@ -76,9 +84,5 @@ protected:
 	void SelectDevice();
 	void CreateDevice();
 	void CreateSyncPrimitives();
-
-	void BindVertexBuffer(VkBuffer buffer);
-	void DrawIndexed(uint32_t count);
-
-	void SetFramebuffer() {} // TODO:
+	void CreateCommandBuffers();
 };

@@ -15,18 +15,16 @@ public: // TODO: not public?
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 
-	VkQueue PresentQueue = VK_NULL_HANDLE;
-
 	VkRenderPass RenderPass;
 
 	uint32_t CurrentImage;
 
-	std::vector<VkImage> SwapChainImages; // TODO: rename
-	std::vector<VkImageView> SwapChainImageViews;
-	std::vector<VkFramebuffer> SwapChainFramebuffers;
+	std::vector<VkImage> Images; // TODO: rename
+	std::vector<VkImageView> ImageViews;
+	std::vector<VkFramebuffer> Framebuffers;
 
-	VkFormat SwapChainImageFormat;
-	VkExtent2D SwapChainExtent;
+	VkFormat ImageFormat;
+	VkExtent2D Extent;
 
 public:
 	void Create(uint32_t width, uint32_t height);

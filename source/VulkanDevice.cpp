@@ -24,13 +24,14 @@ void VulkanDevice::Initialize(SDL_Window* window)
 	SelectDevice();
 	CreateDevice();
 	CreateSyncPrimitives();
+	CreateCommandBuffers();
 
 	// Swapchain
 	SDL_Vulkan_GetDrawableSize(Window, &windowWidth, &windowHeight);
 
 	Swapchain.Device = this;
 	Swapchain.Surface = Surface;
-	Swapchain.PresentQueue = PresentQueue;
+	//Swapchain.PresentQueue = PresentQueue;
 	Swapchain.Create(windowWidth, windowHeight);
 
 	// Memory Allocator
@@ -42,44 +43,23 @@ void VulkanDevice::Initialize(SDL_Window* window)
 
 	VkResult result = vmaCreateAllocator(&allocatorInfo, &Allocator);
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to create memory allocator");
-
-	// Command Pool
-	VkCommandPoolCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	createInfo.queueFamilyIndex = GraphicsFamily;
-	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-	result = vkCreateCommandPool(Device, &createInfo, nullptr, &CommandPool);
-	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to create command pool");
-
-	// Command Buffers
-	CommandBuffers.resize(MAX_FRAMES_AHEAD); //Swapchain.SwapChainFramebuffers.size());
-
-	VkCommandBufferAllocateInfo allocation = {};
-	allocation.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocation.commandPool = CommandPool;
-	allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocation.commandBufferCount = static_cast<uint32_t>(CommandBuffers.size());
-
-	result = vkAllocateCommandBuffers(Device, &allocation, CommandBuffers.data());
-	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to allocate command buffers");
 }
 
-void VulkanDevice::BeginFrame(VkBuffer VertexBuffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe)
+void VulkanDevice::BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe)
 {
-	vkWaitForFences(Device, 1, &fences[currentFrame], VK_TRUE, UINT64_MAX);
-	vkResetFences(Device, 1, &fences[currentFrame]);
+	vkWaitForFences(Device, 1, &Fences[CurrentFrame], VK_TRUE, UINT64_MAX);
+	vkResetFences(Device, 1, &Fences[CurrentFrame]);
 
-	uint32_t imageIndex = Swapchain.NextImage(imageAvailableSemaphores[currentFrame]);
+	uint32_t imageIndex = Swapchain.NextImage(ImageAvailableSemaphores[CurrentFrame]);
 
 	// Main (Swapchain) Render Pass
 	// Cmd buffer
-	vkResetCommandBuffer(CommandBuffers[currentFrame], 0);
+	vkResetCommandBuffer(CommandBuffers[CurrentFrame], 0);
 
 	VkCommandBufferBeginInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	VkResult result = vkBeginCommandBuffer(CommandBuffers[currentFrame], &bufferInfo);
+	VkResult result = vkBeginCommandBuffer(CommandBuffers[CurrentFrame], &bufferInfo);
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to start command buffer recording");
 
 	constexpr float gray = 16.0f / 255.0f;
@@ -88,34 +68,23 @@ void VulkanDevice::BeginFrame(VkBuffer VertexBuffer, VkBuffer IndexBuffer, size_
 	VkRenderPassBeginInfo passInfo = {};
 	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	passInfo.renderPass = Swapchain.RenderPass;
-	passInfo.framebuffer = Swapchain.SwapChainFramebuffers[imageIndex];
+	passInfo.framebuffer = Swapchain.Framebuffers[imageIndex];
 	passInfo.renderArea.offset = { 0, 0 };
-	passInfo.renderArea.extent = Swapchain.SwapChainExtent;
+	passInfo.renderArea.extent = Swapchain.Extent;
 	passInfo.clearValueCount = 1;
 	passInfo.pClearValues = &clearColor;
 
-	vkCmdBeginRenderPass(CommandBuffers[currentFrame], &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(CommandBuffers[CurrentFrame], &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-
-	vkCmdBindPipeline(CommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
-
-	VkBuffer vertexBuffers[] = { VertexBuffer };
-	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(CommandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
-	vkCmdBindIndexBuffer(CommandBuffers[currentFrame], IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-	//vkCmdDraw(CommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-	vkCmdDrawIndexed(CommandBuffers[currentFrame], static_cast<uint32_t>(indsiz), 1, 0, 0, 0);
-
+	vkCmdBindPipeline(CommandBuffers[CurrentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
 }
 
 void VulkanDevice::Present()
 {
-	vkCmdEndRenderPass(CommandBuffers[currentFrame]);
+	vkCmdEndRenderPass(CommandBuffers[CurrentFrame]);
 
-	VkResult result = vkEndCommandBuffer(CommandBuffers[currentFrame]);
+	VkResult result = vkEndCommandBuffer(CommandBuffers[CurrentFrame]);
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to end command buffer recording");
-
 
 	VkPipelineStageFlags stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
@@ -123,20 +92,36 @@ void VulkanDevice::Present()
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.pWaitDstStageMask = &stageFlags;
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
+	submitInfo.pWaitSemaphores = &ImageAvailableSemaphores[CurrentFrame];
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &CommandBuffers[currentFrame];
+	submitInfo.pCommandBuffers = &CommandBuffers[CurrentFrame];
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
+	submitInfo.pSignalSemaphores = &RenderFinishedSemaphores[CurrentFrame];
 
-    result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, fences[currentFrame]);
+    result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, Fences[CurrentFrame]);
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Queue submission failed");
 
+	Swapchain.Present(RenderFinishedSemaphores[CurrentFrame]);
+	CurrentFrame = (CurrentFrame + 1) % MAX_FRAMES_AHEAD;
+}
 
+void VulkanDevice::BindVertexBuffer(const VulkanBuffer* const buffer)
+{
+	// TODO: No offset stuff yet
+	VkDeviceSize offsets = { 0 };
+	vkCmdBindVertexBuffers(CommandBuffers[CurrentFrame], 0, 1, &buffer->Buffer, &offsets);
+}
 
+void VulkanDevice::BindIndexBuffer(const VulkanBuffer* const buffer)
+{
+	// TODO: Support different index buffer data type (u16 and u32 mainly i guess)
+	vkCmdBindIndexBuffer(CommandBuffers[CurrentFrame], buffer->Buffer, 0, VK_INDEX_TYPE_UINT16);
+}
 
-	Swapchain.Present(renderFinishedSemaphores[currentFrame]);
-	currentFrame = (currentFrame + 1) % MAX_FRAMES_AHEAD;
+void VulkanDevice::DrawIndexed(size_t size)
+{
+	// TODO: whole buffer size helper method doesnt take size
+	vkCmdDrawIndexed(CommandBuffers[CurrentFrame], static_cast<uint32_t>(size), 1, 0, 0, 0);
 }
 
 void VulkanDevice::CreateInstance()
@@ -279,9 +264,9 @@ void VulkanDevice::CreateDevice()
 
 void VulkanDevice::CreateSyncPrimitives()
 {
-	imageAvailableSemaphores.resize(MAX_FRAMES_AHEAD);
-	renderFinishedSemaphores.resize(MAX_FRAMES_AHEAD);
-	fences.resize(MAX_FRAMES_AHEAD);
+	ImageAvailableSemaphores.resize(MAX_FRAMES_AHEAD);
+	RenderFinishedSemaphores.resize(MAX_FRAMES_AHEAD);
+	Fences.resize(MAX_FRAMES_AHEAD);
 
 	VkSemaphoreCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -293,8 +278,33 @@ void VulkanDevice::CreateSyncPrimitives()
 	for (uint32_t i = 0; i < MAX_FRAMES_AHEAD; i++)
 	{
 		// lol ignore result
-		vkCreateSemaphore(Device, &createInfo, nullptr, &imageAvailableSemaphores[i]);
-		vkCreateSemaphore(Device, &createInfo, nullptr, &renderFinishedSemaphores[i]);
-		vkCreateFence(Device, &fenceInfo, nullptr, &fences[i]);
+		vkCreateSemaphore(Device, &createInfo, nullptr, &ImageAvailableSemaphores[i]);
+		vkCreateSemaphore(Device, &createInfo, nullptr, &RenderFinishedSemaphores[i]);
+		vkCreateFence(Device, &fenceInfo, nullptr, &Fences[i]);
 	}
+}
+
+void VulkanDevice::CreateCommandBuffers()
+{
+	// Command Pool
+	// TODO: consider transient command buffers?
+	VkCommandPoolCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	createInfo.queueFamilyIndex = GraphicsFamily;
+	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+	VkResult result = vkCreateCommandPool(Device, &createInfo, nullptr, &CommandPool);
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to create command pool");
+
+	// Command Buffers
+	CommandBuffers.resize(MAX_FRAMES_AHEAD); // TODO: consider per swapchain image? why if we only have 2 frames max anyway
+
+	VkCommandBufferAllocateInfo allocation = {};
+	allocation.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocation.commandPool = CommandPool;
+	allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocation.commandBufferCount = static_cast<uint32_t>(CommandBuffers.size());
+
+	result = vkAllocateCommandBuffers(Device, &allocation, CommandBuffers.data());
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to allocate command buffers");
 }

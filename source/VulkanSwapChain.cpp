@@ -62,21 +62,21 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	VkResult result = vkCreateSwapchainKHR(Device->Device, &swapchainInfo, nullptr, &Swapchain);
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain creation failed");
 
-	SwapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(Device->Device, Swapchain, &imageCount, SwapChainImages.data());
+	Images.resize(imageCount);
+	vkGetSwapchainImagesKHR(Device->Device, Swapchain, &imageCount, Images.data());
 
-	SwapChainImageFormat = surfaceFormat.format;
-	SwapChainExtent = extent;
+	ImageFormat = surfaceFormat.format;
+	Extent = extent;
 
 	// Image Views
-	SwapChainImageViews.resize(imageCount);
-	for (size_t i = 0; i < SwapChainImages.size(); i++)
+	ImageViews.resize(imageCount);
+	for (size_t i = 0; i < Images.size(); i++)
 	{
 		VkImageViewCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		createInfo.image = SwapChainImages[i];
+		createInfo.image = Images[i];
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = SwapChainImageFormat;
+		createInfo.format = ImageFormat;
 
 		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -89,13 +89,13 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 
-		VkResult result = vkCreateImageView(Device->Device, &createInfo, nullptr, &SwapChainImageViews[i]);
+		VkResult result = vkCreateImageView(Device->Device, &createInfo, nullptr, &ImageViews[i]);
 		CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain creation failed");
 	}
 
 	// Render Pass
 	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format = SwapChainImageFormat;
+	colorAttachment.format = ImageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -123,11 +123,11 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain creation failed");
 
 	// Framebuffers
-	SwapChainFramebuffers.resize(SwapChainImageViews.size());
+	Framebuffers.resize(ImageViews.size());
 
-	for (size_t i = 0; i < SwapChainImageViews.size(); i++)
+	for (size_t i = 0; i < ImageViews.size(); i++)
 	{
-		VkImageView attachments[] = { SwapChainImageViews[i] };
+		VkImageView attachments[] = { ImageViews[i] };
 
 		VkFramebufferCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -138,13 +138,13 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 		createInfo.height = height;
 		createInfo.layers = 1;
 
-		result = vkCreateFramebuffer(Device->Device, &createInfo, nullptr, &SwapChainFramebuffers[i]);
+		result = vkCreateFramebuffer(Device->Device, &createInfo, nullptr, &Framebuffers[i]);
 		CRITICAL_ASSERT(result == VK_SUCCESS, "Swapchain!!!");
 	}
 
 
 	// Endlog
-	printf("# of images : %zd\n", SwapChainImages.size());
+	printf("# of images : %zd\n", Images.size());
 }
 
 uint32_t VulkanSwapchain::NextImage(VkSemaphore semaphore)
@@ -172,7 +172,7 @@ void VulkanSwapchain::Present(VkSemaphore waitSemaphore)
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = &waitSemaphore;
 
-	VkResult result = vkQueuePresentKHR(PresentQueue, &presentInfo);
+	VkResult result = vkQueuePresentKHR(Device->PresentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR ||
 		result == VK_SUBOPTIMAL_KHR)
 	{
