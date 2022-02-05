@@ -26,8 +26,6 @@ void VulkanDevice::Initialize(SDL_Window* window)
 	CreateSyncPrimitives();
 
 	// Swapchain
-	int32_t windowWidth = 0;
-	int32_t windowHeight = 0;
 	SDL_Vulkan_GetDrawableSize(Window, &windowWidth, &windowHeight);
 
 	Swapchain.Device = this;
@@ -49,21 +47,92 @@ void VulkanDevice::Initialize(SDL_Window* window)
 	VkCommandPoolCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	createInfo.queueFamilyIndex = GraphicsFamily;
+	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	result = vkCreateCommandPool(Device, &createInfo, nullptr, &CommandPool);
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to create command pool");
+
+	// Command Buffers
+	CommandBuffers.resize(MAX_FRAMES_AHEAD); //Swapchain.SwapChainFramebuffers.size());
+
+	VkCommandBufferAllocateInfo allocation = {};
+	allocation.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocation.commandPool = CommandPool;
+	allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocation.commandBufferCount = static_cast<uint32_t>(CommandBuffers.size());
+
+	result = vkAllocateCommandBuffers(Device, &allocation, CommandBuffers.data());
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to allocate command buffers");
 }
 
-void VulkanDevice::BeginFrame()
-{	
+void VulkanDevice::BeginFrame(VkBuffer VertexBuffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe)
+{
 	vkWaitForFences(Device, 1, &fences[currentFrame], VK_TRUE, UINT64_MAX);
 	vkResetFences(Device, 1, &fences[currentFrame]);
 
-	//uint32_t imageIndex = Swapchain.NextImage(imageAvailableSemaphores[currentFrame]);
+	uint32_t imageIndex = Swapchain.NextImage(imageAvailableSemaphores[currentFrame]);
+
+	// Main (Swapchain) Render Pass
+	// Cmd buffer
+	vkResetCommandBuffer(CommandBuffers[currentFrame], 0);
+
+	VkCommandBufferBeginInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+	VkResult result = vkBeginCommandBuffer(CommandBuffers[currentFrame], &bufferInfo);
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to start command buffer recording");
+
+	constexpr float gray = 16.0f / 255.0f;
+	VkClearValue clearColor = { {{gray, gray, gray, 1.0f }} };
+
+	VkRenderPassBeginInfo passInfo = {};
+	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	passInfo.renderPass = Swapchain.RenderPass;
+	passInfo.framebuffer = Swapchain.SwapChainFramebuffers[imageIndex];
+	passInfo.renderArea.offset = { 0, 0 };
+	passInfo.renderArea.extent = Swapchain.SwapChainExtent;
+	passInfo.clearValueCount = 1;
+	passInfo.pClearValues = &clearColor;
+
+	vkCmdBeginRenderPass(CommandBuffers[currentFrame], &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+
+	vkCmdBindPipeline(CommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
+
+	VkBuffer vertexBuffers[] = { VertexBuffer };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(CommandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
+	vkCmdBindIndexBuffer(CommandBuffers[currentFrame], IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+	//vkCmdDraw(CommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+	vkCmdDrawIndexed(CommandBuffers[currentFrame], static_cast<uint32_t>(indsiz), 1, 0, 0, 0);
+
 }
 
 void VulkanDevice::Present()
 {
+	vkCmdEndRenderPass(CommandBuffers[currentFrame]);
+
+	VkResult result = vkEndCommandBuffer(CommandBuffers[currentFrame]);
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to end command buffer recording");
+
+
+	VkPipelineStageFlags stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pWaitDstStageMask = &stageFlags;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &CommandBuffers[currentFrame];
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
+
+    result = vkQueueSubmit(GraphicsQueue, 1, &submitInfo, fences[currentFrame]);
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Queue submission failed");
+
+
 
 
 	Swapchain.Present(renderFinishedSemaphores[currentFrame]);

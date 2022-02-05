@@ -21,7 +21,7 @@ public: // TODO: not public?
 
 	uint32_t CurrentImage;
 
-	std::vector<VkImage> SwapChainImages;
+	std::vector<VkImage> SwapChainImages; // TODO: rename
 	std::vector<VkImageView> SwapChainImageViews;
 	std::vector<VkFramebuffer> SwapChainFramebuffers;
 

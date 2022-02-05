@@ -16,6 +16,10 @@ class VulkanDevice
 public:
 	VulkanDevice();
 
+	// TEMP: !!! TODO:
+	int32_t windowWidth = 0;
+	int32_t windowHeight = 0;
+
 	static VkInstance Instance;
 
 	SDL_Window* Window = nullptr;
@@ -46,7 +50,7 @@ public:
 
 	void Initialize(SDL_Window* window);
 
-	void BeginFrame();
+	void BeginFrame(VkBuffer VertexBuffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe);
 	void Present();
 
 protected:
@@ -72,4 +76,9 @@ protected:
 	void SelectDevice();
 	void CreateDevice();
 	void CreateSyncPrimitives();
+
+	void BindVertexBuffer(VkBuffer buffer);
+	void DrawIndexed(uint32_t count);
+
+	void SetFramebuffer() {} // TODO:
 };

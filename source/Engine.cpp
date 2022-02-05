@@ -151,24 +151,24 @@ void Engine::CleanupSwapchain()
 
 void Engine::Render()
 {
-	NewDevice->BeginFrame();
+	NewDevice->BeginFrame(VertexBuffer, IndexBuffer, indices.size(), GraphicsPipeline);
 
-	uint32_t imageIndex = NewDevice->Swapchain.NextImage(NewDevice->imageAvailableSemaphores[NewDevice->currentFrame]);
+	//uint32_t imageIndex = NewDevice->Swapchain.NextImage(NewDevice->imageAvailableSemaphores[NewDevice->currentFrame]);
 
-	VkPipelineStageFlags stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	//VkPipelineStageFlags stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.pWaitDstStageMask = &stageFlags;
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &NewDevice->imageAvailableSemaphores[NewDevice->currentFrame];
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &CommandBuffers[imageIndex];
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &NewDevice->renderFinishedSemaphores[NewDevice->currentFrame];
+	//VkSubmitInfo submitInfo = {};
+	//submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	//submitInfo.pWaitDstStageMask = &stageFlags;
+	//submitInfo.waitSemaphoreCount = 1;
+	//submitInfo.pWaitSemaphores = &NewDevice->imageAvailableSemaphores[NewDevice->currentFrame];
+	//submitInfo.commandBufferCount = 1;
+	//submitInfo.pCommandBuffers = &CommandBuffers[imageIndex];
+	//submitInfo.signalSemaphoreCount = 1;
+	//submitInfo.pSignalSemaphores = &NewDevice->renderFinishedSemaphores[NewDevice->currentFrame];
 
-	VkResult result = vkQueueSubmit(NewDevice->GraphicsQueue, 1, &submitInfo, NewDevice->fences[NewDevice->currentFrame]);
-	CRITICAL_ASSERT(result == VK_SUCCESS, "Queue submission failed");
+	//VkResult result = vkQueueSubmit(NewDevice->GraphicsQueue, 1, &submitInfo, NewDevice->fences[NewDevice->currentFrame]);
+	//CRITICAL_ASSERT(result == VK_SUCCESS, "Queue submission failed");
 
 	NewDevice->Present();
 
