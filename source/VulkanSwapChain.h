@@ -30,6 +30,6 @@ public: // TODO: not public?
 
 public:
 	void Create(uint32_t width, uint32_t height);
-	int NextImage(VkSemaphore semaphore);
+	uint32_t NextImage(VkSemaphore semaphore);
 	void Present(VkSemaphore waitSemaphore);
 };

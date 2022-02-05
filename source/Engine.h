@@ -41,15 +41,15 @@ public:
 	//VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
 
-	const uint32_t MAX_FRAMES_AHEAD = 2;
+	//const uint32_t MAX_FRAMES_AHEAD = 2;
 	// VkSemaphore imageAvailableSemaphores[MAX_FRAMES_AHEAD];
 
 	// TODO: replace with statically allocated ^
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
-	std::vector<VkFence> inFlightFences;
-	std::vector<VkFence> imagesInFlight;
-	uint32_t currentFrame = 0;
+	//std::vector<VkSemaphore> imageAvailableSemaphores;
+	//std::vector<VkSemaphore> renderFinishedSemaphores;
+	//std::vector<VkFence> inFlightFences;
+	//std::vector<VkFence> imagesInFlight;
+	//uint32_t currentFrame = 0;
 
 
 

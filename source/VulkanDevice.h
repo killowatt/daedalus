@@ -23,21 +23,35 @@ public:
 	VkDevice Device = VK_NULL_HANDLE;
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	VmaAllocator Allocator = VK_NULL_HANDLE;
-
 	VulkanSwapchain Swapchain;
+
+	uint32_t currentFrame = 0;
+
+	// Queues
+	int32_t GraphicsFamily = -1;
+	int32_t PresentFamily = -1;
 
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;
 	VkQueue TransferQueue = VK_NULL_HANDLE;
 
-	int32_t GraphicsFamily = -1;
-	int32_t PresentFamily = -1;
+	// Command Buffers
+	VkCommandPool CommandPool;
+	std::vector<VkCommandBuffer> CommandBuffers;
+
+	// Sync Primitives
+	std::vector<VkSemaphore> imageAvailableSemaphores;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> fences;
 
 	void Initialize(SDL_Window* window);
 
+	void BeginFrame();
 	void Present();
 
 protected:
+	const uint32_t MAX_FRAMES_AHEAD = 2;
+
 	const std::vector<const char*> AdditionalExtensions =
 	{
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -57,4 +71,5 @@ protected:
 
 	void SelectDevice();
 	void CreateDevice();
+	void CreateSyncPrimitives();
 };

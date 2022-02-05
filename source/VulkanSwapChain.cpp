@@ -147,7 +147,7 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	printf("# of images : %zd\n", SwapChainImages.size());
 }
 
-int VulkanSwapchain::NextImage(VkSemaphore semaphore)
+uint32_t VulkanSwapchain::NextImage(VkSemaphore semaphore)
 {
 	VkResult result = vkAcquireNextImageKHR(Device->Device, Swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &CurrentImage);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
