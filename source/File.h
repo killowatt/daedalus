@@ -5,5 +5,5 @@
 
 namespace File
 {
-	std::vector<char> ReadAllBytes(const std::string& fileName);
+	std::vector<uint8_t> ReadAllBytes(const std::string& fileName);
 }

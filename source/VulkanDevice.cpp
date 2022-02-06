@@ -45,7 +45,7 @@ void VulkanDevice::Initialize(SDL_Window* window)
 	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to create memory allocator");
 }
 
-void VulkanDevice::BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe)
+void VulkanDevice::BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t indsiz, VulkanPipeline* pipe)
 {
 	vkWaitForFences(Device, 1, &Fences[CurrentFrame], VK_TRUE, UINT64_MAX);
 	vkResetFences(Device, 1, &Fences[CurrentFrame]);
@@ -76,7 +76,7 @@ void VulkanDevice::BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t inds
 
 	vkCmdBeginRenderPass(CommandBuffers[CurrentFrame], &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBindPipeline(CommandBuffers[CurrentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
+	vkCmdBindPipeline(CommandBuffers[CurrentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipe->Pipeline);
 }
 
 void VulkanDevice::Present()
@@ -118,6 +118,11 @@ void VulkanDevice::BindIndexBuffer(const VulkanBuffer* const buffer)
 	vkCmdBindIndexBuffer(CommandBuffers[CurrentFrame], buffer->Buffer, 0, VK_INDEX_TYPE_UINT16);
 }
 
+void VulkanDevice::BindPipeline(const VulkanPipeline* const pipeline)
+{
+	vkCmdBindPipeline(CommandBuffers[CurrentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->Pipeline);
+}
+
 void VulkanDevice::DrawIndexed(size_t size)
 {
 	// TODO: whole buffer size helper method doesnt take size
@@ -156,11 +161,7 @@ void VulkanDevice::CreateInstance()
 	createInfo.ppEnabledLayerNames = ValidationLayers.data();
 
 	VkResult result = vkCreateInstance(&createInfo, nullptr, &Instance);
-	if (result != VK_SUCCESS)
-	{
-		std::cout << "FAIL\n";
-		return;
-	}
+	CRITICAL_ASSERT(result == VK_SUCCESS, "Failed to create instance");
 }
 
 void VulkanDevice::SelectDevice()

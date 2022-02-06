@@ -1,5 +1,7 @@
 #include "VulkanBuffer.h"
+
 #include "Common.h"
+#include "VulkanDevice.h"
 
 VulkanBuffer::VulkanBuffer()
 {
@@ -8,7 +10,12 @@ VulkanBuffer::VulkanBuffer()
 VulkanBuffer* VulkanBuffer::Create(VulkanDevice* device, BufferType type, const void* datazz, size_t size)
 {
 	VulkanBuffer* buffer = new VulkanBuffer();
+	buffer->Init(device, type, datazz, size);
+	return buffer;
+}
 
+void VulkanBuffer::Init(VulkanDevice* device, BufferType type, const void* datazz, size_t size)
+{
 	VkBufferUsageFlags flags;
 	switch (type)
 	{
@@ -32,12 +39,23 @@ VulkanBuffer* VulkanBuffer::Create(VulkanDevice* device, BufferType type, const 
 	allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-	vmaCreateBuffer(device->Allocator, &bufferInfo, &allocationInfo, &buffer->Buffer, &buffer->Allocation, nullptr);
+	vmaCreateBuffer(device->Allocator, &bufferInfo, &allocationInfo, &Buffer, &Allocation, nullptr);
 
 	void* destination;
-	vmaMapMemory(device->Allocator, buffer->Allocation, &destination);
+	vmaMapMemory(device->Allocator, Allocation, &destination);
 	memcpy(destination, datazz, (size_t)bufferInfo.size);
-	vmaUnmapMemory(device->Allocator,  buffer->Allocation);
+	vmaUnmapMemory(device->Allocator, Allocation);
+}
+
+VulkanVertexBuffer::VulkanVertexBuffer()
+{
+}
+
+VulkanVertexBuffer* VulkanVertexBuffer::Create(VulkanDevice* device, const void* data, size_t size, std::vector<VertexAttribute> attributes)
+{
+	VulkanVertexBuffer* buffer = new VulkanVertexBuffer();
+	buffer->Init(device, BufferType::Vertex, data, size);
+	buffer->Attributes = attributes;
 
 	return buffer;
 }

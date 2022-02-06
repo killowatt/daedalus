@@ -11,6 +11,7 @@
 
 #include "VulkanDevice.h"
 #include "VulkanBuffer.h"
+#include "VulkanPipeline.h"
 
 class Engine
 {
@@ -36,7 +37,7 @@ public:
 
 	// VkQueue GraphicsQueue = nullptr;
 
-	VkSurfaceKHR Surface = nullptr;
+	// VkSurfaceKHR Surface = nullptr;
 
 	//VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
@@ -61,43 +62,46 @@ public:
 	VulkanBuffer* Vb;
 	VulkanBuffer* Ib;
 	
+	VulkanShader* NewShader;
+
+	VulkanPipeline* NewPipeline;
 
 	//VkRenderPass RenderPass;
-	VkPipelineLayout PipelineLayout;
+	//VkPipelineLayout PipelineLayout;
 
-	VkPipeline GraphicsPipeline;
+	//VkPipeline GraphicsPipeline;
 
-	VkCommandPool CommandPool;
-	std::vector<VkCommandBuffer> CommandBuffers;
+	//VkCommandPool CommandPool;
+	//std::vector<VkCommandBuffer> CommandBuffers;
 
 	struct Vertex {
 		glm::vec2 pos;
 		glm::vec3 color;
 
-		static VkVertexInputBindingDescription getBindingDescription() {
-			VkVertexInputBindingDescription bindingDescription = {};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Vertex);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		//static VkVertexInputBindingDescription getBindingDescription() {
+		//	VkVertexInputBindingDescription bindingDescription = {};
+		//	bindingDescription.binding = 0;
+		//	bindingDescription.stride = sizeof(Vertex);
+		//	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-			return bindingDescription;
-		}
+		//	return bindingDescription;
+		//}
 
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+		//static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+		//	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
 
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDescriptions[0].offset = offsetof(Vertex, pos);
+		//	attributeDescriptions[0].binding = 0;
+		//	attributeDescriptions[0].location = 0;
+		//	attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		//	attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[1].offset = offsetof(Vertex, color);
+		//	attributeDescriptions[1].binding = 0;
+		//	attributeDescriptions[1].location = 1;
+		//	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		//	attributeDescriptions[1].offset = offsetof(Vertex, color);
 
-			return attributeDescriptions;
-		}
+		//	return attributeDescriptions;
+		//}
 	};
 
 	const std::vector<Vertex> vertices = {

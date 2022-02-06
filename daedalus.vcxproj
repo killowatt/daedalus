@@ -17,6 +17,8 @@
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\VulkanBuffer.cpp" />
     <ClCompile Include="source\VulkanDevice.cpp" />
+    <ClCompile Include="source\VulkanPipeline.cpp" />
+    <ClCompile Include="source\VulkanShader.cpp" />
     <ClCompile Include="source\VulkanSwapChain.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -25,6 +27,8 @@
     <ClInclude Include="source\File.h" />
     <ClInclude Include="source\VulkanBuffer.h" />
     <ClInclude Include="source\VulkanDevice.h" />
+    <ClInclude Include="source\VulkanPipeline.h" />
+    <ClInclude Include="source\VulkanShader.h" />
     <ClInclude Include="source\VulkanSwapChain.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -2,6 +2,7 @@
 
 #include "VulkanSwapChain.h"
 #include "VulkanBuffer.h"
+#include "VulkanPipeline.h"
 
 #include "vulkan/vulkan.h"
 #include "vk_mem_alloc.h"
@@ -52,14 +53,16 @@ public:
 
 	void Initialize(SDL_Window* window);
 
-	void BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t indsiz, VkPipeline pipe);
+	void BeginFrame(VkBuffer Buffer, VkBuffer IndexBuffer, size_t indsiz, VulkanPipeline* pipe);
 	void Present();
 
 	void BindVertexBuffer(const VulkanBuffer* const buffer);
 	void BindIndexBuffer(const VulkanBuffer* const buffer);
+	void BindPipeline(const VulkanPipeline* const pipeline);
+
 	void DrawIndexed(size_t count);
 
-	void SetFramebuffer() {} // TODO:
+	void SetFramebuffer(); // TODO:
 
 protected:
 	const uint32_t MAX_FRAMES_AHEAD = 2;
