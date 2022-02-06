@@ -7,6 +7,9 @@
 
 #include <set>
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 VkInstance VulkanDevice::Instance = VK_NULL_HANDLE;
 
 VulkanDevice::VulkanDevice()

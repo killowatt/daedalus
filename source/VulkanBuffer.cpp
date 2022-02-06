@@ -7,14 +7,14 @@ VulkanBuffer::VulkanBuffer()
 {
 }
 
-VulkanBuffer* VulkanBuffer::Create(VulkanDevice* device, BufferType type, const void* datazz, size_t size)
+VulkanBuffer* VulkanBuffer::Create(VulkanDevice* device, BufferType type, const void* data, size_t size)
 {
 	VulkanBuffer* buffer = new VulkanBuffer();
-	buffer->Init(device, type, datazz, size);
+	buffer->Init(device, type, data, size);
 	return buffer;
 }
 
-void VulkanBuffer::Init(VulkanDevice* device, BufferType type, const void* datazz, size_t size)
+void VulkanBuffer::Init(VulkanDevice* device, BufferType type, const void* data, size_t size)
 {
 	VkBufferUsageFlags flags;
 	switch (type)
@@ -43,7 +43,7 @@ void VulkanBuffer::Init(VulkanDevice* device, BufferType type, const void* dataz
 
 	void* destination;
 	vmaMapMemory(device->Allocator, Allocation, &destination);
-	memcpy(destination, datazz, (size_t)bufferInfo.size);
+	memcpy(destination, data, (size_t)bufferInfo.size);
 	vmaUnmapMemory(device->Allocator, Allocation);
 }
 
